@@ -30,11 +30,14 @@ public class IdCardController {
             base64Json.put("videoBase64", base64Code);
             String base64JsonResult = HttpClientUtils.httpPost(url, JSON.toJSONString(base64Json));
             JSONObject base64JsonResultJsonObject = JSONObject.parseObject(base64JsonResult);
-            JSONObject data = base64JsonResultJsonObject.getJSONObject("data");
-            Float score = data.getFloat("score");
-            if (score > 0.9) {
-                jsonObject.put("code", 0);
-                jsonObject.put("message", "活体检测成功");
+            int code = base64JsonResultJsonObject.getIntValue("code");
+            if (code == 0) {
+                JSONObject data = base64JsonResultJsonObject.getJSONObject("data");
+                Float score = data.getFloat("score");
+                if (score > 0.9) {
+                    jsonObject.put("code", 0);
+                    jsonObject.put("message", "活体检测成功");
+                }
             }
             return jsonObject.toJSONString();
 

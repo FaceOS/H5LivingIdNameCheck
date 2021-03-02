@@ -1,5 +1,5 @@
 # H5LivingIdNameCheck
-H5活体实名制验证
+H5活体实名制验证SpingBoot示例
 
 ### 接口文档
 

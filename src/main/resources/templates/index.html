@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="renderer" content="webkit">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <link rel="stylesheet" href="/layui/css/layui.css" media="all">
+    <title>实名认证</title>
+</head>
+<body>
+<div style="padding: 30px;">
+
+    <blockquote class="layui-elem-quote layui-text">
+        H5活体实名制验证
+    </blockquote>
+
+    <form id="uploadForm" class="layui-form layui-form-pane" action="">
+
+        <div id="photo" class="layui-upload" style="display: none">
+            <p style="margin: 2px">面部清晰完整，拍摄正脸照</p>
+            <button type="button" class="layui-btn" id="idcardPhoto">上传照片</button>
+            <span id="photoSuccess" style="color: red;display: none">上传成功</span>
+            <div class="layui-upload-list">
+                <img class="layui-upload-img" id="idcardPhotoImg" style="width: 100px;height: 100px">
+                <input type="hidden" id="FaceBase64" name="FaceBase64">
+                <p id="idcardPhotoText"></p>
+            </div>
+        </div>
+
+        <div id="videoD" class="layui-upload" style="display: none;margin-bottom: 10px">
+            <p style="margin: 2px">面部清晰完整，拍摄2-4秒</p>
+            <button type="button" class="layui-btn" id="video"><i class="layui-icon"></i>上传视频</button>
+            <span id="videoSuccess" style="color: red;"></span>
+        </div>
+
+
+        <div class="layui-form-item">
+            <label class="layui-form-label">比对类型</label>
+            <div class="layui-input-block">
+                <select name="CheckType" lay-filter="matchType">
+                    <option value="1" selected="">实名验证(证件号+姓名)</option>
+                    <option value="2">照片活体(证件号+姓名+照片)</option>
+                    <option value="3">视频活体验证(证件号+姓名+视频)</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="layui-form-item">
+            <label class="layui-form-label">姓名</label>
+            <div class="layui-input-block">
+                <input type="text" name="Name" lay-verify="required" lay-reqtext="姓名不能为空" autocomplete="off"
+                       placeholder="请输入证姓名" class="layui-input" maxlength="5">
+            </div>
+        </div>
+
+        <div class="layui-form-item">
+            <label class="layui-form-label">证件号</label>
+            <div class="layui-input-block">
+                <input type="text" name="CardNo" lay-verify="required" lay-reqtext="证件号不能为空" autocomplete="off"
+                       placeholder="请输入证件号" class="layui-input" maxlength="18">
+            </div>
+        </div>
+
+
+        <div class="layui-form-item">
+            <label class="layui-form-label">比对结果</label>
+            <div class="layui-input-block">
+                <label>
+                    <input id="result" type="text" readonly class="layui-input" maxlength="5">
+                </label>
+            </div>
+        </div>
+
+
+        <div class="layui-form-item">
+            <div class="layui-input-block">
+                <button class="layui-btn" lay-submit lay-filter="formUpgrade">提交</button>
+                <button id="reset" type="reset" class="layui-btn layui-btn-primary">重置</button>
+            </div>
+        </div>
+
+    </form>
+</div>
+<script src="/layui/layui.js" charset="utf-8"></script>
+<script src="/layui/jquery.min.js" charset="utf-8"></script>
+<script>
+    // 重置事件
+    $("#reset").click(function () {
+        $('#photo').hide()
+        $('#videoD').hide()
+    })
+
+    //压缩方法
+    function dealImage(base64, w, callback) {
+        var newImage = new Image();
+        var quality = 0.3;    //压缩系数0-1之间
+        newImage.src = base64;
+        newImage.setAttribute("crossOrigin", 'Anonymous');	//url为外域时需要
+        var imgWidth, imgHeight;
+        newImage.onload = function () {
+            imgWidth = this.width;
+            imgHeight = this.height;
+            var canvas = document.createElement("canvas");
+            var ctx = canvas.getContext("2d");
+            if (Math.max(imgWidth, imgHeight) > w) {
+                if (imgWidth > imgHeight) {
+                    canvas.width = w;
+                    canvas.height = w * imgHeight / imgWidth;
+                } else {
+                    canvas.height = w;
+                    canvas.width = w * imgWidth / imgHeight;
+                }
+            } else {
+                canvas.width = imgWidth;
+                canvas.height = imgHeight;
+                quality = 0.6;
+            }
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(this, 0, 0, canvas.width, canvas.height);
+            var base64 = canvas.toDataURL("image/jpeg", quality); //压缩语句
+            callback(base64);//必须通过回调函数返回，否则无法及时拿到该值
+        }
+    }
+
+    function idcardPhoto(base64) {
+        $('#FaceBase64').val(base64.replace('data:image/jpeg;base64,', ''))
+    }
+
+    layui.use('upload', function () {
+        var $ = layui.jquery
+            , upload = layui.upload;
+
+        upload.render({
+            elem: '#video'
+            , url: '/idCard/uploadMp4' //改成您自己的上传接口
+            , accept: 'video' //视频
+            , acceptMime: 'video/*'
+            , size: 10240
+            , before: function (obj) { //obj参数包含的信息，跟 choose回调完全一致，可参见上文。
+                $('#videoSuccess').html('')
+                layer.load(); //上传loading
+                liveSuccess = false
+            }
+            , done: function (res) {
+                layer.closeAll('loading'); //关闭loading
+                layer.msg(res.message);
+                $('#videoSuccess').html(res.message)
+                if (res.code == 0) {
+                    liveSuccess = true
+                }
+            }
+            , error: function (index, upload) {
+                layer.closeAll('loading'); //关闭loading
+                layer.msg('检测失败');
+                $('#videoSuccess').html('检测失败')
+                liveSuccess = false
+            }
+        });
+
+        //抓拍照上传
+        upload.render({
+            elem: '#idcardPhoto'
+            , url: 'https://httpbin.org/post' //改成您自己的上传接口
+            , accept: 'images' //视频
+            , acceptMime: 'image/*'
+            , before: function (obj) {
+                layer.load(); //上传loading
+                //预读本地文件示例，不支持ie8
+                obj.preview(function (index, file, result) {
+                    dealImage(result, 500, idcardPhoto);
+                    $('#idcardPhotoImg').attr('src', result); //图片链接（base64）
+                });
+            }
+            , done: function (res) {
+                layer.closeAll('loading'); //关闭loading
+                //如果上传失败
+                if (res.code > 0) {
+                    return layer.msg('上传失败');
+                }
+                $('#photoSuccess').show()
+                layer.msg('上传成功');
+                //上传成功
+            }
+            , error: function () {
+                layer.closeAll('loading'); //关闭loading
+                //演示失败状态，并实现重传
+                // var demoText = $('#demoText');
+                // demoText.html('<span style="color: #FF5722;">上传失败</span> <a class="layui-btn layui-btn-xs demo-reload">重试</a>');
+                // demoText.find('.demo-reload').on('click', function () {
+                //     uploadInst.upload();
+                // });
+            }
+        });
+    });
+
+    var selectData = 1;
+    var liveSuccess;
+    layui.use('form', function () {
+        var form = layui.form;
+        form.on('select(matchType)', function (data) {
+            if (data.value == 1) {
+                $('#photo').hide()
+                $('#videoD').hide()
+                selectData = 1;
+            } else if (data.value == 2) {
+                $('#photo').show()
+                $('#videoD').hide()
+                $(":file").attr('capture', 'user');
+                selectData = 2;
+            } else if (data.value == 3) {
+                $('#photo').hide()
+                $('#videoD').show()
+                $(":file").attr('capture', 'user');
+                selectData = 3;
+            }
+        })
+        form.on('formReset', function (data) {
+            console.log(1)
+        })
+        //监听提交
+        form.on('submit(formUpgrade)', function (data) {
+            if (selectData == 3 && !liveSuccess) {
+                layer.msg('活体检测失败');
+                return false
+            }
+            $.ajax({
+                url: "/idCard/cxzx",
+                data: JSON.stringify(data.field),
+                type: 'POST',
+                cache: false,        // 不缓存数据
+                processData: false,  // 不处理数据
+                contentType: false,   // 不设置内容类型
+                success: function (result) {
+                    var data = JSON.parse(result);
+                    console.log(data.detail)
+                    var resultMsg = '';
+                    if (data.detail != undefined) {
+                        resultMsg = data.detail.resultMsg
+                    }
+                    $('#result').val(data.MESSAGE + ' ' + resultMsg)
+
+
+                }
+            });
+
+            return false;
+        });
+    });
+
+</script>
+
+</body>
+</html>

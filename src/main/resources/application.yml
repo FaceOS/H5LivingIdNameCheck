@@ -1,0 +1,30 @@
+# Spring配置
+spring:
+  # 模板引擎
+  thymeleaf:
+    mode: HTML
+    encoding: utf-8
+    # 禁用缓存
+    cache: false
+    # 文件上传
+  servlet:
+    multipart:
+      # 单个文件大小
+      max-file-size:  300MB
+      # 设置总上传的文件大小
+      max-request-size:  5120MB
+
+# 开发环境配置
+server:
+  # 服务器的HTTP端口，默认为80
+  port: 8081
+  servlet:
+    # 应用的访问路径
+    context-path: /
+  tomcat:
+    # tomcat的URI编码
+    uri-encoding: UTF-8
+logging:
+  level:
+    com.renren: debug
+    org.springframework: warn

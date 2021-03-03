@@ -76,7 +76,7 @@ public class HttpClientUtils {
      */
     public static String httpPost(String url, String data) throws Exception {
         logger.debug(url);
-        logger.debug(data);
+//        logger.debug(data);
         String jsonResult = null;
         //发送get请求
         HttpClient client = new SSLClient();

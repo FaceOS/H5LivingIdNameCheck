@@ -19,8 +19,8 @@
 
         <div id="photo" class="layui-upload" style="display: none">
             <p style="margin: 2px">面部清晰完整，拍摄正脸照</p>
-            <button type="button" class="layui-btn" id="idcardPhoto">上传照片</button>
-            <span id="photoSuccess" style="color: red;display: none">上传成功</span>
+            <button type="button" class="layui-btn" id="idcardPhoto"><i class="layui-icon"></i>上传照片</button>
+            <span id="photoSuccess" style="color: red;"></span>
             <div class="layui-upload-list">
                 <img class="layui-upload-img" id="idcardPhotoImg" style="width: 100px;height: 100px">
                 <input type="hidden" id="FaceBase64" name="FaceBase64">
@@ -91,42 +91,6 @@
         $('#videoD').hide()
     })
 
-    //压缩方法
-    function dealImage(base64, w, callback) {
-        var newImage = new Image();
-        var quality = 0.3;    //压缩系数0-1之间
-        newImage.src = base64;
-        newImage.setAttribute("crossOrigin", 'Anonymous');	//url为外域时需要
-        var imgWidth, imgHeight;
-        newImage.onload = function () {
-            imgWidth = this.width;
-            imgHeight = this.height;
-            var canvas = document.createElement("canvas");
-            var ctx = canvas.getContext("2d");
-            if (Math.max(imgWidth, imgHeight) > w) {
-                if (imgWidth > imgHeight) {
-                    canvas.width = w;
-                    canvas.height = w * imgHeight / imgWidth;
-                } else {
-                    canvas.height = w;
-                    canvas.width = w * imgWidth / imgHeight;
-                }
-            } else {
-                canvas.width = imgWidth;
-                canvas.height = imgHeight;
-                quality = 0.6;
-            }
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.drawImage(this, 0, 0, canvas.width, canvas.height);
-            var base64 = canvas.toDataURL("image/jpeg", quality); //压缩语句
-            callback(base64);//必须通过回调函数返回，否则无法及时拿到该值
-        }
-    }
-
-    function idcardPhoto(base64) {
-        $('#FaceBase64').val(base64.replace('data:image/jpeg;base64,', ''))
-    }
-
     layui.use('upload', function () {
         var $ = layui.jquery
             , upload = layui.upload;
@@ -136,7 +100,7 @@
             , url: '/idCard/uploadMp4' //改成您自己的上传接口
             , accept: 'video' //视频
             , acceptMime: 'video/*'
-            , size: 10240
+            , size: 1024 * 5
             , before: function (obj) { //obj参数包含的信息，跟 choose回调完全一致，可参见上文。
                 $('#videoSuccess').html('')
                 layer.load(); //上传loading
@@ -149,6 +113,7 @@
                 if (res.code == 0) {
                     liveSuccess = true
                 }
+
             }
             , error: function (index, upload) {
                 layer.closeAll('loading'); //关闭loading
@@ -161,29 +126,35 @@
         //抓拍照上传
         upload.render({
             elem: '#idcardPhoto'
-            , url: 'https://httpbin.org/post' //改成您自己的上传接口
+            , url: '/idCard/uploadImg' //改成您自己的上传接口
             , accept: 'images' //视频
             , acceptMime: 'image/*'
+            , size: 1024 * 2
             , before: function (obj) {
+                $('#photoSuccess').html()
                 layer.load(); //上传loading
                 //预读本地文件示例，不支持ie8
                 obj.preview(function (index, file, result) {
-                    dealImage(result, 500, idcardPhoto);
+                    // dealImage(result, 500, idcardPhoto);
                     $('#idcardPhotoImg').attr('src', result); //图片链接（base64）
                 });
             }
             , done: function (res) {
                 layer.closeAll('loading'); //关闭loading
-                //如果上传失败
-                if (res.code > 0) {
-                    return layer.msg('上传失败');
-                }
-                $('#photoSuccess').show()
+                // //如果上传失败
+                // if (res.code > 0) {
+                //     return layer.msg('上传失败');
+                // }
+                $('#photoSuccess').html(res.message)
                 layer.msg('上传成功');
                 //上传成功
+
+                $('#FaceBase64').val(res.faceBase64)
             }
             , error: function () {
                 layer.closeAll('loading'); //关闭loading
+                $('#photoSuccess').html('检测失败')
+                layer.msg('检测失败');
                 //演示失败状态，并实现重传
                 // var demoText = $('#demoText');
                 // demoText.html('<span style="color: #FF5722;">上传失败</span> <a class="layui-btn layui-btn-xs demo-reload">重试</a>');

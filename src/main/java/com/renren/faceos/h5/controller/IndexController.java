@@ -12,7 +12,6 @@ public class IndexController {
 
     @GetMapping("/")
     public String index() {
-        logger.info("index");
         return "index";
     }
 
